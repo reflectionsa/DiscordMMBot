@@ -25,14 +25,14 @@ export const CodeCommand: Command = {
             name: 'ign',
             description: 'In-game name of the host',
             type: ApplicationCommandOptionType.String,
-            required: true,
+            required: false,
         },
     ],
     type: ApplicationCommandType.ChatInput,
     run: async (client: Client, interaction: CommandInteraction) => {
         const { channelId } = interaction;
         const code = interaction.options.get('code')?.value as string;
-        const ign = interaction.options.get('ign')?.value as string;
+        const ign = (interaction.options.get('ign')?.value as string) || interaction.user.username;
 
         const match = await matchService.findByChannelId(channelId);
         if (!match) {
