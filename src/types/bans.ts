@@ -9,7 +9,7 @@ export type BansType = typeof BansType[keyof typeof BansType];
 
 export const banTimes: Record<keyof typeof BansType, number> = {
     [BansType.mod]: 10,
-    [BansType.abandon]: 30,
-    [BansType.preAbandon]: 5,
-    [BansType.ready]: 10,
+    [BansType.abandon]: 45,
+    [BansType.preAbandon]: 15,
+    [BansType.ready]: 20,
 };
