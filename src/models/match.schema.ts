@@ -49,6 +49,7 @@ export interface IMatch {
     teamASide: string;
     version: number;
     gameType: GameType;
+    codeSharedAt?: number;
 }
 
 // 2. Create a Schema corresponding to the document interface.
@@ -66,6 +67,7 @@ const matchSchema = new Schema<IMatch>({
     region: { type: String, required: false },
     version: { type: Number, required: true },
     gameType: { type: String, required: true },
+    codeSharedAt: { type: Number },
 });
 
 const Match = model<IMatch>('Match', matchSchema);

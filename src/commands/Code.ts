@@ -7,6 +7,9 @@ import {
 import { Command } from '../Command';
 import * as matchService from '../services/match.service';
 import { safelyReplyToInteraction } from '../helpers/interactions';
+import Match from '../models/match.schema';
+
+const RATE_LIMIT_MS = 15_000;
 
 export const CodeCommand: Command = {
     name: 'code',
@@ -41,17 +44,35 @@ export const CodeCommand: Command = {
             return;
         }
 
-        const interactionResponse = await safelyReplyToInteraction({
-            interaction,
-            content: `<@&${match.roleId}> Lobby is on **${ign}**, code is **${code}**`,
-        });
-        if (!interactionResponse) return;
-        const reply = await interactionResponse.fetch();
+        if (match.codeSharedAt) {
+            const elapsed = Date.now() - match.codeSharedAt;
+            if (elapsed < RATE_LIMIT_MS) {
+                const secondsLeft = Math.ceil((RATE_LIMIT_MS - elapsed) / 1000);
+                await safelyReplyToInteraction({
+                    interaction,
+                    ephemeral: true,
+                    content: `Please wait ${secondsLeft} second${secondsLeft !== 1 ? 's' : ''} before sharing a new code.`,
+                });
+                return;
+            }
+        }
 
-        setTimeout(() => {
-            reply.reply(
-                `<@&${match.roleId}> It's been 7 minutes, as per the rules, everyone should be in the lobby. If this is not the case, ping moderators, and remaining players will be force abandoned.`
-            );
-        }, 7 * 60 * 1000);
+        const channel = interaction.channel;
+        if (!channel) return;
+
+        await Match.updateOne(
+            { match_number: match.match_number },
+            { codeSharedAt: Date.now() }
+        );
+
+        await safelyReplyToInteraction({
+            interaction,
+            ephemeral: true,
+            content: 'Lobby details shared!',
+        });
+
+        await channel.send(
+            `<@&${match.roleId}> Lobby is on **${ign}**, code is **${code}**`
+        );
     },
 };
