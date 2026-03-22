@@ -1,6 +1,7 @@
 import { Command } from './Command';
 import { Abandon } from './commands/Abandon';
 import { CodeCommand } from './commands/Code';
+import { Lookup } from './commands/Lookup';
 import { AddNote } from './commands/mod/AddNote';
 import { Bans } from './commands/mod/Bans';
 import { EndGame } from './commands/mod/EndGame';
@@ -41,6 +42,7 @@ import { QKick } from './commands/mod/QKick';
 
 export const Commands: Command[] = [
     Stats,
+    Lookup,
     Top,
     QueueCommand,
     Unready,
