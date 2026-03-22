@@ -35,6 +35,9 @@ import { SendDM } from './commands/admin/DM';
 import { PostAimHero } from './commands/admin/PostAimHero';
 import { ResendReady } from './commands/mod/ResendReady';
 import { StartGame } from './commands/mod/StartGame';
+import { MatchScoreOverride } from './commands/mod/MatchScoreOverride';
+import { UserProfile } from './commands/mod/UserProfile';
+import { QKick } from './commands/mod/QKick';
 
 export const Commands: Command[] = [
     Stats,
@@ -67,6 +70,9 @@ export const Commands: Command[] = [
     TestMVP,
     ResendReady,
     StartGame,
+    MatchScoreOverride,
+    UserProfile,
+    QKick,
     //Admin commands
     RankCurve,
     FetchAvatars,
