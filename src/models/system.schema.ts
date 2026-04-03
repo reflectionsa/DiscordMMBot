@@ -15,6 +15,15 @@ export interface ISystem {
     teams: string[];
     emotes: EmotesType;
     winScore: number;
+    partyEnabled: boolean;
+    partyMaxSize: number;
+    partyMinSize: number;
+    partyPreventOverfill: boolean;
+    matchTeamMode: string;
+    matchCaptainSelection: string;
+    matchDraftType: string;
+    matchFirstPick: string;
+    matchAutoMute: boolean;
     _id: ObjectId;
 }
 
@@ -30,6 +39,15 @@ const systemSchema = new Schema<ISystem>({
     emotes: { type: {}, required: true },
     regionQueue: { type: Boolean, required: true },
     winScore: { type: Number, required: true },
+    partyEnabled: { type: Boolean, default: false },
+    partyMaxSize: { type: Number, default: 4 },
+    partyMinSize: { type: Number, default: 2 },
+    partyPreventOverfill: { type: Boolean, default: true },
+    matchTeamMode: { type: String, default: 'balanced' },
+    matchCaptainSelection: { type: String, default: 'two_highest_elo' },
+    matchDraftType: { type: String, default: 'snake' },
+    matchFirstPick: { type: String, default: 'highest_elo_captain' },
+    matchAutoMute: { type: Boolean, default: false },
 });
 
 const System = model<ISystem>('System', systemSchema);

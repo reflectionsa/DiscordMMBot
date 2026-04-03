@@ -34,6 +34,7 @@ import { RefreshRankRoles } from './commands/admin/RefreshRankRoles';
 import { TestMVP } from './commands/mod/TestMVP';
 import { SendDM } from './commands/admin/DM';
 import { PostAimHero } from './commands/admin/PostAimHero';
+import { PartyConfiguration } from './commands/admin/PartyConfiguration';
 import { ResendReady } from './commands/mod/ResendReady';
 import { StartGame } from './commands/mod/StartGame';
 import { MatchScoreOverride } from './commands/mod/MatchScoreOverride';
@@ -83,4 +84,5 @@ export const Commands: Command[] = [
     RefreshRankRoles,
     SendDM,
     PostAimHero,
+    PartyConfiguration,
 ];
