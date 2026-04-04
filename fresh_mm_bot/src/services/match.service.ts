@@ -368,7 +368,7 @@ const tryStartDuels = (client: Client): Promise<void> => {
     return new Promise(async resolve => {
         if (!process.env.SERVER_ID) throw new Error('No server id');
         const eloDiffCutOff = 300;
-        const queueChannelId = await getChannelId(ChannelsType['duels-queue']);
+        const queueChannelId = await getChannelId(ChannelsType['ranked-queue']);
         const minutesForPriority = 5;
         const count = gameTypePlayerCount[GameType.duels];
 
@@ -794,9 +794,8 @@ export const startGame = ({
             }
 
             regionString =
-                regionCounts
-                    .map(r => `${upperCase(r.region)} - ${r.count}\n`)
-                    .join('') + `\n\nGame should be played on ${upperCase(gameRegion)} region`;
+                regionCounts.map(r => `${upperCase(r.region)} - ${r.count}\n`).join('') +
+                `\n\nGame should be played on ${upperCase(gameRegion)} region`;
         } else {
             regionString = `\n\nGame should be played on ${match.region?.toUpperCase()} region`;
         }
@@ -962,7 +961,9 @@ export const checkMatchMVP = ({ matchNumber, client }: { matchNumber: number; cl
 
         const mvpVotes = groupBy(votes, v => v);
 
-        const candidates = Object.keys(mvpVotes).filter(key => mvpVotes[key].length >= VOTES_FOR_MVP);
+        const candidates = Object.keys(mvpVotes).filter(
+            key => mvpVotes[key].length >= VOTES_FOR_MVP
+        );
 
         // Tiebreak: if multiple candidates have the same vote count, no MVP is awarded
         const mvpIds: string[] = [];

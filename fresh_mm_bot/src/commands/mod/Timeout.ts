@@ -9,16 +9,98 @@ import {
     ButtonBuilder,
     ButtonStyle,
     MessageActionRowComponentBuilder,
+    TextChannel,
 } from 'discord.js';
 import { Command } from '../../Command';
 import * as playerService from '../../services/player.service';
-import { getGuild } from '../../helpers/guild';
+import * as enforcementService from '../../services/enforcement.service';
 import { BansType } from '../../types/bans';
-import { getConfig } from '../../services/system.service';
-import { RanksType } from '../../types/channel';
-import { botLog, sendDirectMessage } from '../../helpers/messages';
+import { getChannelId } from '../../services/system.service';
+import { ChannelsType } from '../../types/channel';
+import { botLog, sendDirectMessage, sendMessageInChannel } from '../../helpers/messages';
 import { isUserMod } from '../../helpers/permissions';
 import { parseDuration, formatDuration } from '../../helpers/duration';
+
+export const buildEnforcementEmbed = (enforcement: any, targetUser?: any): EmbedBuilder => {
+    const isVoided = enforcement.status === 'voided';
+
+    const embed = new EmbedBuilder()
+        .setColor(isVoided ? '#808080' : '#FF0000')
+        .setTitle(isVoided ? '~~Timeout~~ — VOIDED' : 'Timeout Applied')
+        .addFields(
+            {
+                name: 'Target',
+                value: `${enforcement.odDisplayName} (<@${enforcement.odId}>) | \`${enforcement.odId}\``,
+                inline: false,
+            },
+            {
+                name: 'Moderator',
+                value: `<@${enforcement.modId}>`,
+                inline: true,
+            },
+            {
+                name: 'Duration',
+                value: formatDuration(enforcement.durationMinutes),
+                inline: true,
+            },
+            {
+                name: 'Expires',
+                value: `<t:${Math.floor(enforcement.expiresAt / 1000)}:R>`,
+                inline: true,
+            },
+            {
+                name: 'Reason',
+                value: enforcement.reason,
+                inline: false,
+            },
+            {
+                name: 'Mod Notes',
+                value: enforcement.modNotes || '*None*',
+                inline: false,
+            }
+        )
+        .setFooter({ text: `Enforcement ID: ${enforcement._id}` })
+        .setTimestamp(enforcement.createdAt);
+
+    if (isVoided) {
+        embed.addFields(
+            { name: 'Void Reason', value: enforcement.voidReason, inline: false },
+            { name: 'Voided By', value: `<@${enforcement.voidedBy}>`, inline: true },
+            {
+                name: 'Voided At',
+                value: `<t:${Math.floor(enforcement.voidedAt / 1000)}:F>`,
+                inline: true,
+            }
+        );
+    }
+
+    if (enforcement.editHistory && enforcement.editHistory.length > 0) {
+        const historyStr = enforcement.editHistory
+            .map(
+                (e: any) =>
+                    `<t:${Math.floor(e.timestamp / 1000)}:f> — <@${e.modId}> changed **${e.field}**\n\`Before:\` ${e.oldValue}\n\`After:\` ${e.newValue}`
+            )
+            .join('\n\n');
+        embed.addFields({ name: 'Edit History', value: historyStr, inline: false });
+    }
+
+    return embed;
+};
+
+export const buildEnforcementButtons = (enforcementId: string, disabled = false) => {
+    return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
+        new ButtonBuilder()
+            .setCustomId(`enforcement.edit.${enforcementId}`)
+            .setLabel('Edit')
+            .setStyle(ButtonStyle.Primary)
+            .setDisabled(disabled),
+        new ButtonBuilder()
+            .setCustomId(`enforcement.void.${enforcementId}`)
+            .setLabel('Void')
+            .setStyle(ButtonStyle.Danger)
+            .setDisabled(disabled)
+    );
+};
 
 export const Timeout: Command = {
     name: 'timeout',
@@ -45,10 +127,15 @@ export const Timeout: Command = {
             required: true,
         },
         {
+            type: ApplicationCommandOptionType.String,
+            name: 'notes',
+            description: 'Internal mod notes (visible in logs & lookup)',
+            required: false,
+        },
+        {
             type: ApplicationCommandOptionType.Boolean,
             name: 'display',
-            description:
-                'Send message in ranked queue channel, defaults to not sending message about ban',
+            description: 'Send message in ranked queue channel about the ban',
             required: false,
         },
     ],
@@ -56,6 +143,7 @@ export const Timeout: Command = {
         const { user } = interaction;
         const mention = interaction.options.get('user')?.user;
         const reason = interaction.options.get('reason')?.value as string;
+        const notes = (interaction.options.get('notes')?.value as string) || '';
         const display = interaction.options.get('display')?.value as boolean;
         const durationString = interaction.options.get('duration')?.value as string;
 
@@ -64,12 +152,11 @@ export const Timeout: Command = {
         if (!durationString)
             return interaction.reply({ content: 'No duration provided', ephemeral: true });
 
-        // Parse duration
         const durationMinutes = parseDuration(durationString);
         if (durationMinutes === null) {
             return interaction.reply({
                 content:
-                    'Invalid duration format. Please use formats like: 10m, 1h, 7d (m=minutes, h=hours, d=days)',
+                    'Invalid duration format. Use formats like: 10m, 1h, 7d (m=minutes, h=hours, d=days)',
                 ephemeral: true,
             });
         }
@@ -77,59 +164,69 @@ export const Timeout: Command = {
         const isMod = await isUserMod(client, interaction);
         if (!isMod) return;
 
-        // Add ban and remove from queue
+        // Apply ban on the player record + remove from queue
         await playerService.addBan({
             userId: mention.id,
-            reason: reason,
+            reason,
             duration: durationMinutes,
             modId: user.id,
             type: BansType.mod,
             client,
-            display: display,
+            display,
         });
 
-        // Send DM to user
+        // Get display name
+        let displayName = mention.username;
+        try {
+            const guild = interaction.guild;
+            if (guild) {
+                const member = await guild.members.fetch(mention.id);
+                displayName = member.displayName;
+            }
+        } catch {}
+
+        // Create enforcement record
+        const enforcement = await enforcementService.createEnforcement({
+            odId: mention.id,
+            odDisplayName: displayName,
+            modId: user.id,
+            type: BansType.mod,
+            durationMinutes,
+            reason,
+            modNotes: notes,
+        });
+
+        // DM the user
         try {
             await sendDirectMessage({
                 client,
                 userId: mention.id,
-                message: `Your Breachers Ranked Matchmaking privileges have been disabled for ${formatDuration(durationMinutes)}. Reason: ${reason}`,
+                message: `Your Ranked Matchmaking privileges have been disabled for ${formatDuration(durationMinutes)}. Reason: ${reason}`,
             });
         } catch (error) {
             console.error('Failed to send DM to user:', error);
         }
 
-        // Create interactive embed with buttons
-        const timeoutEmbed = new EmbedBuilder()
-            .setColor('#FF0000')
-            .setTitle('Timeout Applied')
-            .addFields(
-                { name: 'User', value: `<@${mention.id}>`, inline: true },
-                { name: 'Duration', value: formatDuration(durationMinutes), inline: true },
-                { name: 'Moderator', value: `<@${user.id}>`, inline: true },
-                { name: 'Reason', value: reason, inline: false }
-            )
-            .setTimestamp();
+        // Build log embed and send to bot-log channel
+        const embed = buildEnforcementEmbed(enforcement);
+        const row = buildEnforcementButtons(enforcement._id.toString());
 
-        const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-            new ButtonBuilder()
-                .setCustomId(`timeout.edit.${mention.id}`)
-                .setLabel('Edit')
-                .setStyle(ButtonStyle.Primary),
-            new ButtonBuilder()
-                .setCustomId(`timeout.void.${mention.id}`)
-                .setLabel('Void')
-                .setStyle(ButtonStyle.Danger)
-        );
-
-        botLog({
-            messageContent: `<@${user.id}> timed out <@${mention.id}> for ${formatDuration(durationMinutes)}. Reason: ${reason}`,
+        const logChannelId = await getChannelId(ChannelsType['bot-log']);
+        const logMessage = await sendMessageInChannel({
+            channelId: logChannelId,
+            messageContent: { embeds: [embed], components: [row] },
             client,
         });
 
+        // Save the log message reference so we can update it later
+        await enforcementService.setLogMessage({
+            enforcementId: enforcement._id.toString(),
+            messageId: logMessage.id,
+            channelId: logChannelId,
+        });
+
         await interaction.reply({
-            embeds: [timeoutEmbed],
-            components: [row],
+            content: `Timeout applied to **${displayName}** (<@${mention.id}>) for ${formatDuration(durationMinutes)}. Enforcement logged.`,
             ephemeral: true,
         });
     },

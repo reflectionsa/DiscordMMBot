@@ -21,7 +21,8 @@ const createChannel = async (
     channelType:
         | DiscordChannelType.GuildCategory
         | DiscordChannelType.GuildText
-        | DiscordChannelType.GuildVoice
+        | DiscordChannelType.GuildVoice,
+    parentId?: string
 ): Promise<ChannelType> => {
     const guild = await getGuild(client);
     if (!guild) throw new Error('no guild found');
@@ -29,6 +30,7 @@ const createChannel = async (
     const channel = await guild.channels.create({
         name: name,
         type: channelType,
+        ...(parentId ? { parent: parentId } : {}),
     });
     return { name: name, id: channel.id };
 };
@@ -40,12 +42,13 @@ const cacheChannel = async (
     channelType:
         | DiscordChannelType.GuildCategory
         | DiscordChannelType.GuildText
-        | DiscordChannelType.GuildVoice
+        | DiscordChannelType.GuildVoice,
+    parentId?: string
 ): Promise<boolean> => {
     return new Promise(async (resolve, reject) => {
         const channel = config.channels.find(t => t.name === name);
         if (!channel) {
-            const newChannel = await createChannel(client, name, channelType);
+            const newChannel = await createChannel(client, name, channelType, parentId);
             const oldConfig = await getConfig();
             const newChannels = [...oldConfig.channels, newChannel];
             await updateConfig({ id: oldConfig._id, body: { channels: newChannels } });
@@ -64,7 +67,7 @@ const cacheChannel = async (
 
             let newChannels = oldConfig.channels.filter(t => t.name !== channel.name);
 
-            const newChannel = await createChannel(client, name, channelType);
+            const newChannel = await createChannel(client, name, channelType, parentId);
 
             // add new channel to the existing channels on config
             newChannels = [...newChannels, newChannel];
@@ -163,7 +166,12 @@ const cacheReactionRoleMessages = async ({
 
     if (!roleChannel) throw new Error('no role channel found');
 
-    const channel = (await guild.channels.fetch(roleChannel.id)) as TextChannel;
+    let channel: TextChannel;
+    try {
+        channel = (await guild.channels.fetch(roleChannel.id)) as TextChannel;
+    } catch {
+        throw new Error('role channel not found or inaccessible');
+    }
     if (!channel) throw new Error('role channel not found');
 
     const messages = await channel.messages.fetch();
@@ -258,8 +266,13 @@ const cacheRegionMessages = async ({ config, client }: { config: ISystem; client
     const regionChannel = config.channels.find(t => t.name === ChannelsType.region);
     if (!regionChannel) throw new Error('no region channel found');
 
-    const channel = (await client.channels.fetch(regionChannel.id)) as TextChannel;
-    if (!channel) throw new Error('ready channel not found');
+    let channel: TextChannel;
+    try {
+        channel = (await client.channels.fetch(regionChannel.id)) as TextChannel;
+    } catch {
+        throw new Error('region channel not found or inaccessible');
+    }
+    if (!channel) throw new Error('region channel not found');
 
     const messages = await channel.messages.fetch();
 
@@ -283,7 +296,12 @@ const cacheReadyUpMessages = async ({
     const readyChannel = config.channels.find(t => t.name === channelsType);
     if (!readyChannel) throw new Error('no ready channel found');
 
-    const channel = (await client.channels.fetch(readyChannel.id)) as TextChannel;
+    let channel: TextChannel;
+    try {
+        channel = (await client.channels.fetch(readyChannel.id)) as TextChannel;
+    } catch {
+        throw new Error('ready-up channel not found or inaccessible');
+    }
     if (!channel) throw new Error('ready channel not found');
 
     const regionQueueEnabled = await getRegionQueue();
@@ -339,11 +357,22 @@ const scaffold = async (client: Client) => {
 
     const config = await getConfig();
 
-    //Loop through channelTypes and fetch channels
+    // Create the top-level bot category first so everything else can nest under it
+    await cacheChannel(config, CategoriesType.bot, client, DiscordChannelType.GuildCategory);
+    const freshConfig = await getConfig();
+    const botCategoryId = freshConfig.channels.find(t => t.name === CategoriesType.bot)?.id;
+
+    //Loop through channelTypes and fetch channels — all placed under the bot category
     await Promise.all(
         Object.keys(ChannelsType).map(key => {
             return new Promise(async (resolve, reject) => {
-                await cacheChannel(config, key, client, DiscordChannelType.GuildText);
+                await cacheChannel(
+                    freshConfig,
+                    key,
+                    client,
+                    DiscordChannelType.GuildText,
+                    botCategoryId
+                );
                 resolve(null);
             });
         })
@@ -360,28 +389,36 @@ const scaffold = async (client: Client) => {
         })
     );
 
+    // Game categories (matches) are top-level — match channels nest under them during gameplay
     await Promise.all(
-        Object.keys(CategoriesType).map(key => {
-            return new Promise(async (resolve, reject) => {
-                await cacheChannel(config, key, client, DiscordChannelType.GuildCategory);
-                resolve(null);
-            });
-        })
+        Object.keys(CategoriesType)
+            .filter(key => key !== CategoriesType.bot)
+            .map(key => {
+                return new Promise(async (resolve, reject) => {
+                    await cacheChannel(freshConfig, key, client, DiscordChannelType.GuildCategory);
+                    resolve(null);
+                });
+            })
     );
 
     await Promise.all(
         Object.keys(VCType).map(key => {
             return new Promise(async (resolve, reject) => {
-                await cacheChannel(config, key, client, DiscordChannelType.GuildVoice);
+                await cacheChannel(
+                    freshConfig,
+                    key,
+                    client,
+                    DiscordChannelType.GuildVoice,
+                    botCategoryId
+                );
                 resolve(null);
             });
         })
     );
 
-    await cacheReactionRoleMessages({ config, guild, client });
-    await cacheReadyUpMessages({ config, client, gameType: GameType.squads });
-    await cacheReadyUpMessages({ config, client, gameType: GameType.duels });
-    await cacheRegionMessages({ config, client });
+    await cacheReactionRoleMessages({ config: await getConfig(), guild, client });
+    await cacheReadyUpMessages({ config: await getConfig(), client, gameType: GameType.squads });
+    await cacheRegionMessages({ config: await getConfig(), client });
 };
 
 export default scaffold;

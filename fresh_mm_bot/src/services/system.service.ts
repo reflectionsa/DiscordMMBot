@@ -45,7 +45,18 @@ export const getConfig = (): Promise<ISystem> => {
         const config = await System.findOne();
 
         if (!config) {
-            await System.create({ last_ping: 0 });
+            await System.create({
+                last_ping: 0,
+                channels: [],
+                roles: [],
+                maps: [],
+                duelsMaps: [],
+                teams: process.env.GAME_TEAMS ? process.env.GAME_TEAMS.split(',') : [],
+                emotes: {},
+                duelsEnabled: false,
+                regionQueue: false,
+                winScore: 13,
+            });
             const newConf = await System.findOne();
             if (!newConf) throw new Error('Config broke');
 

@@ -18,6 +18,8 @@ import {
     handleTimeoutModalSubmit,
 } from './buttonInteractions/timeoutInteraction';
 import { handleModConfirmInteraction } from './buttonInteractions/modConfirmInteraction';
+import { handlePartyInviteInteraction } from './buttonInteractions/partyInviteInteraction';
+import { handleDuelQueueInteraction } from './buttonInteractions/duelQueueInteraction';
 import { respondWithQueue } from '../commands/Queue';
 import { GameType } from '../types/queue';
 import { setPlayerMvpVote } from '../commands/VoteMVP';
@@ -131,8 +133,16 @@ const handleButtonInteraction = async (client: Client, interaction: ButtonIntera
         return handleMatchInteraction(interaction, client);
     }
 
-    if (interaction.customId.split('.')[0] === 'timeout') {
+    if (interaction.customId.split('.')[0] === 'enforcement') {
         return handleTimeoutInteraction(interaction, client);
+    }
+
+    if (interaction.customId.split('.')[0] === 'partyInvite') {
+        return handlePartyInviteInteraction(interaction, client);
+    }
+
+    if (interaction.customId.split('.')[0] === 'duelQueue') {
+        return handleDuelQueueInteraction(interaction, client);
     }
 
     if (
@@ -246,7 +256,7 @@ const handleSlashCommand = async (
 };
 
 const handleModalSubmit = async (client: Client, interaction: any): Promise<void> => {
-    if (interaction.customId.split('.')[0] === 'timeout') {
+    if (interaction.customId.split('.')[0] === 'enforcement') {
         await handleTimeoutModalSubmit(interaction, client);
     }
 };

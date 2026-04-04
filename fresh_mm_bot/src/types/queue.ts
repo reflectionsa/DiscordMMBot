@@ -21,17 +21,17 @@ export const gameTypeName = {
 };
 
 export const gameTypeReadyChannels = {
-    [GameType.duels]: ChannelsType['duels-ready-up'],
+    [GameType.duels]: ChannelsType['ready-up'],
     [GameType.squads]: ChannelsType['ready-up'],
 };
 
 export const gameTypeQueueChannels = {
-    [GameType.duels]: ChannelsType['duels-queue'],
+    [GameType.duels]: ChannelsType['ranked-queue'],
     [GameType.squads]: ChannelsType['ranked-queue'],
 };
 
 export const gameTypeResultsChannels = {
-    [GameType.duels]: ChannelsType['duels-match-results'],
+    [GameType.duels]: ChannelsType['match-results'],
     [GameType.squads]: ChannelsType['match-results'],
 };
 
@@ -41,7 +41,7 @@ export const gameTypePlayerCount = {
 };
 
 export const gameTypeLeaderboardChannels = {
-    [GameType.duels]: ChannelsType['duels-leaderboard'],
+    [GameType.duels]: ChannelsType['leaderboard'],
     [GameType.squads]: ChannelsType['leaderboard'],
 };
 

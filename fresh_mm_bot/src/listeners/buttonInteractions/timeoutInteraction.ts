@@ -1,208 +1,164 @@
 import {
     ButtonInteraction,
     Client,
-    EmbedBuilder,
     ModalBuilder,
     TextInputBuilder,
     TextInputStyle,
     ActionRowBuilder,
     ModalActionRowComponentBuilder,
-    ButtonBuilder,
-    ButtonStyle,
-    MessageActionRowComponentBuilder,
+    TextChannel,
 } from 'discord.js';
-import Player from '../../models/player.schema';
-import { botLog, sendDirectMessage } from '../../helpers/messages';
 import { isUserMod } from '../../helpers/permissions';
-import { parseDuration, formatDuration } from '../../helpers/duration';
 import { safelyReplyToInteraction } from '../../helpers/interactions';
+import * as enforcementService from '../../services/enforcement.service';
+import { buildEnforcementEmbed, buildEnforcementButtons } from '../../commands/mod/Timeout';
+import Player from '../../models/player.schema';
+import { sendDirectMessage } from '../../helpers/messages';
 
-export const handleTimeoutInteraction = async (
-    interaction: ButtonInteraction,
-    client: Client
-) => {
-    const action = interaction.customId.split('.')[1]; // 'edit' or 'void'
-    const userId = interaction.customId.split('.')[2];
+export const handleTimeoutInteraction = async (interaction: ButtonInteraction, client: Client) => {
+    const parts = interaction.customId.split('.');
+    const action = parts[1]; // 'edit' or 'void'
+    const enforcementId = parts[2];
 
-    // Check if user is a mod
     const isMod = await isUserMod(client, interaction);
-    if (!isMod) {
-        return safelyReplyToInteraction({
-            interaction,
-            content: 'You do not have permission to manage timeouts',
-            ephemeral: true,
-        });
-    }
+    if (!isMod) return;
 
-    const player = await Player.findOne({ discordId: userId });
-    if (!player) {
+    const enforcement = await enforcementService.getEnforcementById(enforcementId);
+    if (!enforcement) {
         return safelyReplyToInteraction({
             interaction,
-            content: 'Player not found',
+            content: 'Enforcement record not found',
             ephemeral: true,
         });
     }
 
     if (action === 'void') {
-        // Remove timeout
-        await Player.updateOne(
-            { discordId: userId },
-            {
-                $set: { banEnd: 0 },
-            }
-        );
-
-        botLog({
-            messageContent: `<@${interaction.user.id}> voided timeout for <@${userId}>`,
-            client,
-        });
-
-        // Send DM to user
-        try {
-            await sendDirectMessage({
-                client,
-                userId: userId,
-                message: `Your Breachers Ranked Matchmaking timeout has been voided by a moderator. You can now queue again.`,
-            });
-        } catch (error) {
-            console.error('Failed to send DM to user:', error);
-        }
-
-        // Update the embed
-        const voidEmbed = new EmbedBuilder()
-            .setColor('#00FF00')
-            .setTitle('Timeout Voided')
-            .addFields(
-                { name: 'User', value: `<@${userId}>`, inline: true },
-                { name: 'Voided By', value: `<@${interaction.user.id}>`, inline: true }
-            )
-            .setTimestamp();
-
-        await interaction.update({
-            embeds: [voidEmbed],
-            components: [],
-        });
-    } else if (action === 'edit') {
-        // Show modal to edit duration
         const modal = new ModalBuilder()
-            .setCustomId(`timeout.modal.${userId}`)
-            .setTitle('Edit Timeout Duration');
-
-        const durationInput = new TextInputBuilder()
-            .setCustomId('duration')
-            .setLabel('New Duration (e.g., 10m, 1h, 7d)')
-            .setStyle(TextInputStyle.Short)
-            .setRequired(true)
-            .setPlaceholder('10m');
+            .setCustomId(`enforcement.voidModal.${enforcementId}`)
+            .setTitle('Void Enforcement');
 
         const reasonInput = new TextInputBuilder()
-            .setCustomId('reason')
-            .setLabel('Reason for Change')
+            .setCustomId('voidReason')
+            .setLabel('Reason for voiding')
             .setStyle(TextInputStyle.Paragraph)
             .setRequired(true)
-            .setPlaceholder('Duration adjusted due to...');
+            .setPlaceholder('Explain why this enforcement is being voided...');
 
-        const durationRow = new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
-            durationInput
-        );
-        const reasonRow = new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
+        const row = new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
             reasonInput
         );
+        modal.addComponents(row);
+        await interaction.showModal(modal);
+    } else if (action === 'edit') {
+        const modal = new ModalBuilder()
+            .setCustomId(`enforcement.editModal.${enforcementId}`)
+            .setTitle('Edit Mod Notes');
 
-        modal.addComponents(durationRow, reasonRow);
+        const notesInput = new TextInputBuilder()
+            .setCustomId('modNotes')
+            .setLabel('New Mod Notes')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true)
+            .setValue(enforcement.modNotes || '')
+            .setPlaceholder('Update the mod notes for this enforcement...');
 
+        const row = new ActionRowBuilder<ModalActionRowComponentBuilder>().addComponents(
+            notesInput
+        );
+        modal.addComponents(row);
         await interaction.showModal(modal);
     }
 };
 
 export const handleTimeoutModalSubmit = async (interaction: any, client: Client) => {
-    const userId = interaction.customId.split('.')[2];
-    const newDurationStr = interaction.fields.getTextInputValue('duration');
-    const changeReason = interaction.fields.getTextInputValue('reason');
+    const parts = interaction.customId.split('.');
+    const modalType = parts[1]; // 'voidModal' or 'editModal'
+    const enforcementId = parts[2];
 
-    // Check if user is a mod
     const isMod = await isUserMod(client, interaction);
     if (!isMod) {
         return interaction.reply({
-            content: 'You do not have permission to manage timeouts',
+            content: 'You do not have permission to manage enforcements',
             ephemeral: true,
         });
     }
 
-    // Parse new duration
-    const durationMinutes = parseDuration(newDurationStr);
-    if (durationMinutes === null) {
+    const enforcement = await enforcementService.getEnforcementById(enforcementId);
+    if (!enforcement) {
         return interaction.reply({
-            content:
-                'Invalid duration format. Please use formats like: 10m, 1h, 7d (m=minutes, h=hours, d=days)',
+            content: 'Enforcement record not found',
             ephemeral: true,
         });
     }
 
-    const player = await Player.findOne({ discordId: userId });
-    if (!player) {
-        return interaction.reply({
-            content: 'Player not found',
-            ephemeral: true,
+    if (modalType === 'voidModal') {
+        const voidReason = interaction.fields.getTextInputValue('voidReason');
+
+        // Void the enforcement
+        const updated = await enforcementService.voidEnforcement({
+            enforcementId,
+            voidedBy: interaction.user.id,
+            voidReason,
         });
-    }
 
-    // Update timeout
-    const now = Date.now();
-    const timeoutEnd = now + durationMinutes * 60 * 1000;
+        // Remove the ban from the player
+        await Player.updateOne({ discordId: enforcement.odId }, { $set: { banEnd: 0 } });
 
-    await Player.updateOne(
-        { discordId: userId },
-        {
-            $set: {
-                banEnd: timeoutEnd,
-                banTickDown: timeoutEnd,
-            },
+        // DM the user
+        try {
+            await sendDirectMessage({
+                client,
+                userId: enforcement.odId,
+                message: `Your timeout has been voided by a moderator. You can now queue again.`,
+            });
+        } catch {}
+
+        // Update the original log message
+        if (updated && enforcement.logMessageId && enforcement.logChannelId) {
+            try {
+                const channel = (await client.channels.fetch(
+                    enforcement.logChannelId
+                )) as TextChannel;
+                const message = await channel.messages.fetch(enforcement.logMessageId);
+                const embed = buildEnforcementEmbed(updated);
+                const row = buildEnforcementButtons(enforcementId, true);
+                await message.edit({ embeds: [embed], components: [row] });
+            } catch (e) {
+                console.error('Failed to update log message:', e);
+            }
         }
-    );
 
-    botLog({
-        messageContent: `<@${interaction.user.id}> edited timeout for <@${userId}> to ${formatDuration(durationMinutes)}. Reason: ${changeReason}`,
-        client,
-    });
-
-    // Send DM to user
-    try {
-        await sendDirectMessage({
-            client,
-            userId: userId,
-            message: `Your Breachers Ranked Matchmaking timeout has been updated to ${formatDuration(durationMinutes)}. Reason: ${changeReason}`,
+        await interaction.reply({
+            content: `Enforcement **${enforcementId}** has been voided. Reason: ${voidReason}`,
+            ephemeral: true,
         });
-    } catch (error) {
-        console.error('Failed to send DM to user:', error);
+    } else if (modalType === 'editModal') {
+        const newNotes = interaction.fields.getTextInputValue('modNotes');
+
+        const updated = await enforcementService.updateModNotes({
+            enforcementId,
+            modId: interaction.user.id,
+            newNotes,
+        });
+
+        // Update the original log message
+        if (updated && enforcement.logMessageId && enforcement.logChannelId) {
+            try {
+                const channel = (await client.channels.fetch(
+                    enforcement.logChannelId
+                )) as TextChannel;
+                const message = await channel.messages.fetch(enforcement.logMessageId);
+                const embed = buildEnforcementEmbed(updated);
+                const row = buildEnforcementButtons(enforcementId, updated.status === 'voided');
+                await message.edit({ embeds: [embed], components: [row] });
+            } catch (e) {
+                console.error('Failed to update log message:', e);
+            }
+        }
+
+        await interaction.reply({
+            content: `Mod notes updated for enforcement **${enforcementId}**.`,
+            ephemeral: true,
+        });
     }
-
-    // Create updated embed
-    const updatedEmbed = new EmbedBuilder()
-        .setColor('#FFA500')
-        .setTitle('Timeout Updated')
-        .addFields(
-            { name: 'User', value: `<@${userId}>`, inline: true },
-            { name: 'New Duration', value: formatDuration(durationMinutes), inline: true },
-            { name: 'Updated By', value: `<@${interaction.user.id}>`, inline: true },
-            { name: 'Reason', value: changeReason, inline: false }
-        )
-        .setTimestamp();
-
-    const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-        new ButtonBuilder()
-            .setCustomId(`timeout.edit.${userId}`)
-            .setLabel('Edit')
-            .setStyle(ButtonStyle.Primary),
-        new ButtonBuilder()
-            .setCustomId(`timeout.void.${userId}`)
-            .setLabel('Void')
-            .setStyle(ButtonStyle.Danger)
-    );
-
-    await interaction.reply({
-        embeds: [updatedEmbed],
-        components: [row],
-        ephemeral: true,
-    });
 };

@@ -13,7 +13,7 @@ export default (client: Client): void => {
         await client.application.commands.set(Commands);
 
         //init channels
-        scaffold(client);
+        await scaffold(client);
         updateLeaderboard({ client, gameType: GameType.squads });
         updateLeaderboard({ client, gameType: GameType.duels });
 

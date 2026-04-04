@@ -2,7 +2,6 @@ import { Command } from './Command';
 import { Abandon } from './commands/Abandon';
 import { CodeCommand } from './commands/Code';
 import { Lookup } from './commands/Lookup';
-import { AddNote } from './commands/mod/AddNote';
 import { Bans } from './commands/mod/Bans';
 import { EndGame } from './commands/mod/EndGame';
 import { ForceAbandon } from './commands/mod/ForceAbandon';
@@ -11,7 +10,6 @@ import { ForceSubmit } from './commands/mod/ForceSubmit';
 import { ForceVerify } from './commands/mod/ForceVerify';
 import { GiveElo } from './commands/mod/GiveElo';
 import { Graph } from './commands/Graph';
-import { Notes } from './commands/mod/Notes';
 import { PingMods } from './commands/PingMods';
 import { PingPlayers } from './commands/PingPlayers';
 import { PlayingCommand } from './commands/Playing';
@@ -23,11 +21,11 @@ import { SubmitScore } from './commands/SubmitScore';
 import { Timeout } from './commands/mod/Timeout';
 import { Top } from './commands/Top';
 import { Unready } from './commands/Unready';
-import { Untimeout } from './commands/mod/Untimeout';
 import { GetMatchInfo } from './commands/mod/GetMatchInfo';
 import { FetchAvatars } from './commands/admin/FetchAvatars';
 import { RankCurve } from './commands/admin/RankCurve';
 import { SetConfig } from './commands/admin/SetConfig';
+import { CleanupServer } from './commands/admin/CleanupServer';
 import { EnableDuels } from './commands/mod/EnableDuels';
 import { RunEloDecay } from './commands/admin/RunEloDecay';
 import { RefreshRankRoles } from './commands/admin/RefreshRankRoles';
@@ -40,6 +38,8 @@ import { StartGame } from './commands/mod/StartGame';
 import { MatchScoreOverride } from './commands/mod/MatchScoreOverride';
 import { UserProfile } from './commands/mod/UserProfile';
 import { QKick } from './commands/mod/QKick';
+import { PartyCommand } from './commands/Party';
+import { DuelQueue } from './commands/DuelQueue';
 
 export const Commands: Command[] = [
     Stats,
@@ -57,14 +57,11 @@ export const Commands: Command[] = [
     PingMods,
     //mod commands
     EndGame,
-    AddNote,
     RestartBot,
     Timeout,
-    Untimeout,
     ForceSubmit,
     ForceAbandon,
     Bans,
-    Notes,
     ForceVerify,
     GiveElo,
     ForceReady,
@@ -80,9 +77,12 @@ export const Commands: Command[] = [
     RankCurve,
     FetchAvatars,
     SetConfig,
+    CleanupServer,
     RunEloDecay,
     RefreshRankRoles,
     SendDM,
     PostAimHero,
     PartyConfiguration,
+    PartyCommand,
+    DuelQueue,
 ];

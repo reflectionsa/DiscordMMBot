@@ -1,10 +1,13 @@
-import { Client, CommandInteraction } from 'discord.js';
+import { Client, CommandInteraction, ButtonInteraction } from 'discord.js';
 import { getConfig } from '../services/system.service';
 import { RanksType } from '../types/channel';
 import { getGuild } from './guild';
 import { safelyReplyToInteraction } from './interactions';
 
-export async function isUserMod(client: Client, interaction: CommandInteraction) {
+export async function isUserMod(
+    client: Client,
+    interaction: CommandInteraction | ButtonInteraction
+) {
     const guild = await getGuild(client);
     const { user } = interaction;
     const member = await guild?.members.fetch(user.id);
