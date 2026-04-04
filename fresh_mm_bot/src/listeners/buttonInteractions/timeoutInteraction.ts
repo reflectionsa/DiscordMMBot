@@ -121,7 +121,7 @@ export const handleTimeoutModalSubmit = async (interaction: any, client: Client)
                 )) as TextChannel;
                 const message = await channel.messages.fetch(enforcement.logMessageId);
                 const embed = buildEnforcementEmbed(updated);
-                const row = buildEnforcementButtons(enforcementId, true);
+                const row = buildEnforcementButtons(enforcementId, true, enforcement.durationMinutes);
                 await message.edit({ embeds: [embed], components: [row] });
             } catch (e) {
                 console.error('Failed to update log message:', e);
@@ -149,7 +149,7 @@ export const handleTimeoutModalSubmit = async (interaction: any, client: Client)
                 )) as TextChannel;
                 const message = await channel.messages.fetch(enforcement.logMessageId);
                 const embed = buildEnforcementEmbed(updated);
-                const row = buildEnforcementButtons(enforcementId, updated.status === 'voided');
+                const row = buildEnforcementButtons(enforcementId, updated.status === 'voided', enforcement.durationMinutes);
                 await message.edit({ embeds: [embed], components: [row] });
             } catch (e) {
                 console.error('Failed to update log message:', e);

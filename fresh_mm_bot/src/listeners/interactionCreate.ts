@@ -21,6 +21,7 @@ import { handleModConfirmInteraction } from './buttonInteractions/modConfirmInte
 import { handlePartyInviteInteraction } from './buttonInteractions/partyInviteInteraction';
 import { handlePartyReadyInteraction } from './buttonInteractions/partyReadyInteraction';
 import { handleDuelQueueInteraction } from './buttonInteractions/duelQueueInteraction';
+import { handleResetSeasonInteraction } from './buttonInteractions/resetSeasonInteraction';
 import { respondWithQueue } from '../commands/Queue';
 import { GameType } from '../types/queue';
 import { setPlayerMvpVote } from '../commands/VoteMVP';
@@ -155,6 +156,10 @@ const handleButtonInteraction = async (client: Client, interaction: ButtonIntera
         interaction.customId.split('.')[0] === 'restart'
     ) {
         return handleModConfirmInteraction(interaction, client);
+    }
+
+    if (interaction.customId.split('.')[0] === 'resetseason') {
+        return handleResetSeasonInteraction(interaction, client);
     }
 
     if (!match) {

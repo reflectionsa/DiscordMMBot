@@ -33,6 +33,7 @@ import { TestMVP } from './commands/mod/TestMVP';
 import { SendDM } from './commands/admin/DM';
 import { PostAimHero } from './commands/admin/PostAimHero';
 import { PartyConfiguration } from './commands/admin/PartyConfiguration';
+import { ResetSeason } from './commands/admin/ResetSeason';
 import { ResendReady } from './commands/mod/ResendReady';
 import { StartGame } from './commands/mod/StartGame';
 import { MatchScoreOverride } from './commands/mod/MatchScoreOverride';
@@ -87,4 +88,5 @@ export const Commands: Command[] = [
     PartyConfiguration,
     PartyCommand,
     DuelQueue,
+    ResetSeason,
 ];

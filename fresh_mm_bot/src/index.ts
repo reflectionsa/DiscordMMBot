@@ -1,4 +1,4 @@
-import { Client, IntentsBitField } from 'discord.js';
+import { Client, EmbedBuilder, IntentsBitField, TextChannel } from 'discord.js';
 
 import * as dotenv from 'dotenv';
 import initStatusCron from './crons/updateQueue';
@@ -38,3 +38,28 @@ initEloDecayCron(client);
 initPostAimHeroCron(client);
 initCodeReminderCron(client);
 // runTests();
+
+const STATUS_CHANNEL_ID = '1490120560145858791';
+
+const sendShutdownMessage = async (): Promise<void> => {
+    try {
+        const channel = await client.channels.fetch(STATUS_CHANNEL_ID).catch(() => null);
+        if (channel && 'send' in channel) {
+            const offlineEmbed = new EmbedBuilder()
+                .setTitle('🔴 System Offline')
+                .setColor('#CC0000')
+                .setDescription(
+                    'The bot is going down for maintenance. Active matches will be preserved, but queues are closed.'
+                )
+                .setTimestamp();
+            await (channel as TextChannel).send({ embeds: [offlineEmbed] });
+        }
+    } catch (err) {
+        console.error('Failed to send shutdown message:', err);
+    } finally {
+        process.exit(0);
+    }
+};
+
+process.on('SIGINT', sendShutdownMessage);
+process.on('SIGTERM', sendShutdownMessage);
