@@ -13,7 +13,7 @@ const env = Object.fromEntries(
 );
 
 const TOKEN = env['BOT_TOKEN'];
-const CHANNEL_ID = '1490120560145858791';
+const CHANNEL_ID = '1490124502120661122';
 const ROLE_ID = '1422408866020462664';
 
 if (!TOKEN) {
@@ -22,7 +22,6 @@ if (!TOKEN) {
 }
 
 const body = JSON.stringify({
-    content: `<@&${ROLE_ID}>`,
     embeds: [
         {
             title: '📋 Bot Updates — April 3',
@@ -41,7 +40,6 @@ const body = JSON.stringify({
             footer: { text: 'April 3–4, 2026' },
         },
     ],
-    allowed_mentions: { roles: [ROLE_ID] },
 });
 
 const res = await fetch(`https://discord.com/api/v10/channels/${CHANNEL_ID}/messages`, {

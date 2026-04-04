@@ -70,7 +70,7 @@ export const RestartBot: Command = {
                 content: '✅ No active matches. Restarting bot...',
                 ephemeral: true,
             });
-            throw new Error('Restarting bot');
+            process.exit(0);
         }
     },
 };

@@ -74,6 +74,6 @@ export const handleModConfirmInteraction = async (
         });
 
         // Trigger restart
-        throw new Error('Restarting bot');
+        process.exit(0);
     }
 };
