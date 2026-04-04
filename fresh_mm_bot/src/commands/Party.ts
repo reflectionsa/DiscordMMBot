@@ -102,7 +102,7 @@ const handleCreate = async (interaction: CommandInteraction) => {
             .setDescription(`Leader: <@${party.leaderId}>`)
             .setColor(0x57f287);
 
-        return safelyReplyToInteraction({ interaction, embeds: [embed] });
+        return safelyReplyToInteraction({ interaction, embeds: [embed], ephemeral: true });
     } catch (error: any) {
         return safelyReplyToInteraction({
             interaction,
@@ -171,14 +171,25 @@ const handleInvite = async (client: Client, interaction: CommandInteraction) => 
     const embed = new EmbedBuilder()
         .setTitle('Party Invite')
         .setDescription(
-            `<@${targetUser.id}>, you have been invited to join **${party.name}** by <@${interaction.user.id}>`
+            `You have been invited to join **${party.name}** by <@${interaction.user.id}>`
         )
         .setColor(0x5865f2);
 
+    // DM the invite to the target player
+    try {
+        await targetUser.send({ embeds: [embed], components: [row] });
+    } catch {
+        return safelyReplyToInteraction({
+            interaction,
+            content: `Could not DM <@${targetUser.id}> — they may have DMs disabled.`,
+            ephemeral: true,
+        });
+    }
+
     return safelyReplyToInteraction({
         interaction,
-        embeds: [embed],
-        components: [row],
+        content: `Invite sent to <@${targetUser.id}> via DM!`,
+        ephemeral: true,
     });
 };
 
@@ -188,6 +199,7 @@ const handleLeave = async (interaction: CommandInteraction) => {
         return safelyReplyToInteraction({
             interaction,
             content: `You left **${party?.name}**`,
+            ephemeral: true,
         });
     } catch (error: any) {
         return safelyReplyToInteraction({
@@ -204,6 +216,7 @@ const handleDisband = async (interaction: CommandInteraction) => {
         return safelyReplyToInteraction({
             interaction,
             content: `Party **${name}** has been disbanded`,
+            ephemeral: true,
         });
     } catch (error: any) {
         return safelyReplyToInteraction({

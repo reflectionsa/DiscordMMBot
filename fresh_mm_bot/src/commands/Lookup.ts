@@ -11,8 +11,6 @@ import * as playerService from '../services/player.service';
 import * as enforcementService from '../services/enforcement.service';
 import { getRankName } from '../helpers/rank';
 import Player from '../models/player.schema';
-import { getChannelId } from '../services/system.service';
-import { ChannelsType } from '../types/channel';
 import { safelyReplyToInteraction } from '../helpers/interactions';
 import { formatDuration } from '../helpers/duration';
 import { EnforcementStatus } from '../models/enforcement.schema';
@@ -32,17 +30,8 @@ export const Lookup: Command = {
     run: async (client: Client, interaction: CommandInteraction) => {
         const { user } = interaction;
         const mention = interaction.options.get('user')?.user;
-
-        const queueChannel = await getChannelId(ChannelsType['bot-commands']);
-        if (interaction.channelId !== queueChannel) {
-            return safelyReplyToInteraction({
-                interaction,
-                content: `Keep messages in <#${queueChannel}> channel`,
-                ephemeral: true,
-            });
-        }
-
         const userToCheck = mention || user;
+
         const player = await playerService.findOrCreate(userToCheck);
 
         if (player.name !== userToCheck.username) {
@@ -63,9 +52,17 @@ export const Lookup: Command = {
         const { history } = player;
         const isUnranked = history.length < 10;
         const rankName = isUnranked ? 'Unranked' : getRankName(player.rating);
-        const playerRating = isUnranked ? 'Play 10 matches to get ranked' : floor(player.rating);
+        const playerRating = isUnranked
+            ? '*Play 10 matches to get ranked*'
+            : `${floor(player.rating)}`;
 
         const historyNoAbandon = history.filter(match => match.result !== 'abandon');
+        const wins = historyNoAbandon.filter(m => m.result === 'win').length;
+        const losses = historyNoAbandon.filter(m => m.result === 'loss').length;
+        const winRate =
+            historyNoAbandon.length > 0
+                ? `${Math.round((wins / historyNoAbandon.length) * 100)}%`
+                : 'N/A';
 
         // Last 10 match IDs
         const last10 = historyNoAbandon.slice(-10).reverse();
@@ -74,95 +71,109 @@ export const Lookup: Command = {
                 ? last10
                       .map(
                           m =>
-                              `#${m.matchNumber} (${m.result}, ${m.change > 0 ? '+' : ''}${Math.round(m.change)})`
+                              `\`#${m.matchNumber}\` ${m.result === 'win' ? '🟢' : '🔴'} ${m.change > 0 ? '+' : ''}${Math.round(m.change)}`
                       )
                       .join('\n')
-                : 'No matches played';
+                : '*No matches played yet*';
 
-        const lookupEmbed = new EmbedBuilder()
-            .setTitle(`${displayName} (@${player.name}) | \`${player.discordId}\``)
+        // ── Embed 1: Player Profile ──────────────────────────────────────
+        const isCurrentlyBanned = player.banEnd && player.banEnd > Date.now();
+
+        const profileEmbed = new EmbedBuilder()
+            .setTitle(`${displayName} (@${player.name})`)
+            .setDescription(`\`${userToCheck.id}\``)
             .setColor('#0099ff')
             .setThumbnail(userToCheck.avatarURL())
+            .addFields(
+                { name: 'Rank', value: rankName, inline: true },
+                { name: 'Elo', value: playerRating, inline: true },
+                { name: 'Matches', value: `${historyNoAbandon.length}`, inline: true },
+                { name: 'Wins', value: `${wins}`, inline: true },
+                { name: 'Losses', value: `${losses}`, inline: true },
+                { name: 'Win Rate', value: winRate, inline: true },
+                { name: 'Last 10 Games', value: matchIdList, inline: false }
+            )
             .setTimestamp();
 
-        lookupEmbed.addFields(
-            {
-                name: 'Rank',
-                value: `${rankName}`,
-                inline: true,
-            },
-            {
-                name: 'Elo',
-                value: `${playerRating}`,
-                inline: true,
-            },
-            {
-                name: 'Matches Played',
-                value: `${historyNoAbandon.length}`,
-                inline: true,
-            },
-            {
-                name: 'Last 10 Games',
-                value: matchIdList,
-                inline: false,
-            }
-        );
-
-        // Current suspension status
-        const isCurrentlyBanned = player.banEnd && player.banEnd > Date.now();
         if (isCurrentlyBanned) {
-            const banTimeRemaining = Math.floor((player.banEnd - Date.now()) / (1000 * 60));
-            lookupEmbed.addFields({
-                name: '🚫 Current Suspension',
-                value: [
-                    `**Expires:** <t:${Math.floor(player.banEnd / 1000)}:R>`,
-                    `**Time Remaining:** ${formatDuration(banTimeRemaining)}`,
-                ].join('\n'),
+            profileEmbed.addFields({
+                name: '🚫 Currently Suspended',
+                value: `Expires <t:${Math.floor(player.banEnd / 1000)}:R> (<t:${Math.floor(player.banEnd / 1000)}:F>)`,
                 inline: false,
             });
         }
 
-        // Enforcement history from centralized collection
+        const embeds: EmbedBuilder[] = [profileEmbed];
+
+        // ── Enforcements ─────────────────────────────────────────────────
         const enforcements = await enforcementService.getEnforcementsForUser(userToCheck.id);
 
-        if (enforcements.length > 0) {
-            const enforcementList = enforcements.map(e => {
-                const isVoided = e.status === EnforcementStatus.voided;
-                const statusIcon = isVoided ? '~~' : '';
-                const color = isVoided ? '⚪' : '🔴';
-                const typeLabel = e.type === 'mod' ? 'Manual Timeout' : `Auto (${e.type})`;
+        const active = enforcements.filter(e => e.status === EnforcementStatus.active);
+        const priors = enforcements.filter(e => e.status !== EnforcementStatus.active);
 
-                let line = `${color} ${statusIcon}**${typeLabel}** — ${formatDuration(e.durationMinutes)}${statusIcon}`;
-                line += `\n  Reason: ${e.reason}`;
-                if (e.modNotes) line += `\n  Mod Notes: *${e.modNotes}*`;
-                if (e.modId)
-                    line += `\n  By: <@${e.modId}> — <t:${Math.floor(e.createdAt / 1000)}:f>`;
-                if (isVoided) line += `\n  **VOIDED** by <@${e.voidedBy}>: ${e.voidReason}`;
-                return line;
-            });
+        const formatEnforcement = (e: any): string => {
+            const typeLabel = e.type === 'mod' ? 'Manual Timeout' : `Auto (${e.type})`;
+            const lines = [
+                `**${typeLabel}** — ${formatDuration(e.durationMinutes)}`,
+                `Reason: ${e.reason}`,
+                `By: <@${e.modId}> — <t:${Math.floor(e.createdAt / 1000)}:f>`,
+                `Expires: <t:${Math.floor(e.expiresAt / 1000)}:F>`,
+            ];
+            if (e.modNotes) lines.push(`Notes: *${e.modNotes}*`);
+            if (e.status === EnforcementStatus.voided)
+                lines.push(`**VOIDED** by <@${e.voidedBy}>: ${e.voidReason}`);
+            return lines.join('\n');
+        };
 
-            // Split into chunks to respect embed field limits
-            const chunkSize = 5;
-            for (let i = 0; i < enforcementList.length; i += chunkSize) {
-                const chunk = enforcementList.slice(i, i + chunkSize);
-                lookupEmbed.addFields({
-                    name: i === 0 ? `Enforcements (${enforcements.length} total)` : '\u200b',
-                    value: chunk.join('\n\n'),
+        // Active enforcements embed (red)
+        if (active.length > 0) {
+            const activeEmbed = new EmbedBuilder()
+                .setTitle('🚫 ACTIVE ENFORCEMENTS')
+                .setColor('#FF0000');
+
+            active.forEach((e, i) => {
+                activeEmbed.addFields({
+                    name: `#${i + 1}`,
+                    value: formatEnforcement(e),
                     inline: false,
                 });
-            }
-        } else {
-            lookupEmbed.addFields({
-                name: 'Enforcements',
-                value: 'No enforcements recorded',
+            });
+
+            embeds.push(activeEmbed);
+        }
+
+        // Prior enforcements embed (orange)
+        if (priors.length > 0) {
+            const priorEmbed = new EmbedBuilder()
+                .setTitle('📋 PRIOR ENFORCEMENTS')
+                .setColor('#FF6B00')
+                .setFooter({
+                    text: `${priors.length} prior enforcement${priors.length !== 1 ? 's' : ''}`,
+                });
+
+            priors.forEach((e, i) => {
+                priorEmbed.addFields({
+                    name: `#${i + 1} — ${e.status.toUpperCase()}`,
+                    value: formatEnforcement(e),
+                    inline: false,
+                });
+            });
+
+            embeds.push(priorEmbed);
+        }
+
+        if (active.length === 0 && priors.length === 0) {
+            profileEmbed.addFields({
+                name: '✅ Enforcement History',
+                value: 'No enforcements on record',
                 inline: false,
             });
         }
 
         return safelyReplyToInteraction({
             interaction,
-            embeds: [lookupEmbed],
-            ephemeral: false,
+            embeds,
+            ephemeral: true,
         });
     },
 };
