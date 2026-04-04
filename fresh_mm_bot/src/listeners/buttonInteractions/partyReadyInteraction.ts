@@ -18,8 +18,7 @@ import { ready } from '../../services/queue.service';
 import { getConfig } from '../../services/system.service';
 import { ChannelsType, RanksType } from '../../types/channel';
 import { ceil } from 'lodash';
-import { sendMessageInChannel } from '../../helpers/messages';
-import { gameTypeQueueChannels } from '../../types/queue';
+
 
 /**
  * Called when a player clicks 60m or 30m ready-up button and is in a party.
@@ -188,16 +187,6 @@ export const handlePartyReadyInteraction = async (
         }
 
         updateStatus(client);
-
-        const channelsType = gameTypeQueueChannels[gameType];
-        const queueChannelId = config.channels.find(c => c.name === channelsType)?.id;
-        if (queueChannelId && queued.length > 0) {
-            await sendMessageInChannel({
-                channelId: queueChannelId,
-                messageContent: `🎮 Party **${party.name}** queued up: ${queued.join(', ')}`,
-                client,
-            });
-        }
 
         const lines = [`✅ **Queued (${queued.length}):** ${queued.join(', ') || 'none'}`];
         if (failed.length)
