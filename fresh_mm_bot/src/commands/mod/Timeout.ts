@@ -87,8 +87,13 @@ export const buildEnforcementEmbed = (enforcement: any, targetUser?: any): Embed
     return embed;
 };
 
-export const buildEnforcementButtons = (enforcementId: string, disabled = false, durationMinutes?: number) => {
-    const editLabel = durationMinutes !== undefined ? `Edit (${formatDuration(durationMinutes)})` : 'Edit';
+export const buildEnforcementButtons = (
+    enforcementId: string,
+    disabled = false,
+    durationMinutes?: number
+) => {
+    const editLabel =
+        durationMinutes !== undefined ? `Edit (${formatDuration(durationMinutes)})` : 'Edit';
     return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
         new ButtonBuilder()
             .setCustomId(`enforcement.edit.${enforcementId}`)
@@ -210,7 +215,11 @@ export const Timeout: Command = {
 
         // Build log embed and send to bot-log channel
         const embed = buildEnforcementEmbed(enforcement);
-        const row = buildEnforcementButtons(enforcement._id.toString(), false, enforcement.durationMinutes);
+        const row = buildEnforcementButtons(
+            enforcement._id.toString(),
+            false,
+            enforcement.durationMinutes
+        );
 
         const logChannelId = await getChannelId(ChannelsType['bot-log']);
         const logMessage = await sendMessageInChannel({
