@@ -5,6 +5,8 @@ import { GameType, RegionsType } from '../../types/queue';
 import Match from '../../models/match.schema';
 import { getDuelsEnabled } from '../../services/system.service';
 import { safelyReplyToInteraction } from '../../helpers/interactions';
+import * as partyService from '../../services/party.service';
+import { showPartyQueuePrompt } from './partyReadyInteraction';
 
 export const handleReadyInteraction = async (interaction: ButtonInteraction, client: Client) => {
     console.log('ready interaction', interaction.customId);
@@ -62,6 +64,18 @@ export const handleReadyInteraction = async (interaction: ButtonInteraction, cli
 
     if (action === 'unready') {
         return await handleUnready(client, interaction);
+    }
+
+    // If the player is in a party, show the party queue selection prompt
+    const party = await partyService.findPartyByMember(interaction.user.id);
+    if (party) {
+        return showPartyQueuePrompt(
+            interaction,
+            client,
+            time,
+            region.toLocaleLowerCase() as RegionsType,
+            gameType
+        );
     }
 
     handleReady({

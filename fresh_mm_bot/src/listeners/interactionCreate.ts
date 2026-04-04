@@ -19,6 +19,7 @@ import {
 } from './buttonInteractions/timeoutInteraction';
 import { handleModConfirmInteraction } from './buttonInteractions/modConfirmInteraction';
 import { handlePartyInviteInteraction } from './buttonInteractions/partyInviteInteraction';
+import { handlePartyReadyInteraction } from './buttonInteractions/partyReadyInteraction';
 import { handleDuelQueueInteraction } from './buttonInteractions/duelQueueInteraction';
 import { respondWithQueue } from '../commands/Queue';
 import { GameType } from '../types/queue';
@@ -139,6 +140,10 @@ const handleButtonInteraction = async (client: Client, interaction: ButtonIntera
 
     if (interaction.customId.split('.')[0] === 'partyInvite') {
         return handlePartyInviteInteraction(interaction, client);
+    }
+
+    if (interaction.customId.split('.')[0] === 'partyReady') {
+        return handlePartyReadyInteraction(interaction, client);
     }
 
     if (interaction.customId.split('.')[0] === 'duelQueue') {
