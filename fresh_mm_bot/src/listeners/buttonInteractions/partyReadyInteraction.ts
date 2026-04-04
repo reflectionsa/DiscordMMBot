@@ -19,7 +19,6 @@ import { getConfig } from '../../services/system.service';
 import { ChannelsType, RanksType } from '../../types/channel';
 import { ceil } from 'lodash';
 
-
 /**
  * Called when a player clicks 60m or 30m ready-up button and is in a party.
  * Shows a selection embed: one button per party group + solo queue button.

@@ -38,6 +38,7 @@ import { StartGame } from './commands/mod/StartGame';
 import { MatchScoreOverride } from './commands/mod/MatchScoreOverride';
 import { UserProfile } from './commands/mod/UserProfile';
 import { QKick } from './commands/mod/QKick';
+import { EndMatch } from './commands/mod/EndMatch';
 import { PartyCommand } from './commands/Party';
 import { DuelQueue } from './commands/DuelQueue';
 
@@ -73,6 +74,7 @@ export const Commands: Command[] = [
     MatchScoreOverride,
     UserProfile,
     QKick,
+    EndMatch,
     //Admin commands
     RankCurve,
     FetchAvatars,

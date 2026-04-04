@@ -31,6 +31,7 @@ export const MatchStatus = {
     voting: 'voting',
     started: 'started',
     ended: 'ended',
+    nulled: 'nulled',
 } as const;
 
 export type MatchStatus = (typeof MatchStatus)[keyof typeof MatchStatus];
