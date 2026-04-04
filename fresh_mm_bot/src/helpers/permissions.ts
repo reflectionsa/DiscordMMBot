@@ -13,7 +13,8 @@ export async function isUserMod(
     const member = await guild?.members.fetch(user.id);
 
     const config = await getConfig();
-    const modRoleId = config.roles.find(({ name }) => name === RanksType.mod)?.id;
+    const modRoleId =
+        config.roles.find(({ name }) => name === RanksType.mod)?.id || process.env.MOD_ROLE_ID;
     if (!modRoleId) throw new Error('Mod role not found');
     const isMod = await member.roles.cache.some(r => r.id === modRoleId);
     if (!isMod) {

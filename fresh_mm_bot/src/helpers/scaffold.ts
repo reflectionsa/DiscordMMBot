@@ -88,6 +88,22 @@ const validateRole = ({
     client: Client;
 }) => {
     return new Promise(async (resolve, reject) => {
+        // If this is the mod role and we have a hardcoded ID in env, use it directly
+        if (key === RanksType.mod && process.env.MOD_ROLE_ID) {
+            const modRoleId = process.env.MOD_ROLE_ID;
+            const oldConfig = await getConfig();
+            const existing = oldConfig.roles.find(r => r.name === RanksType.mod);
+            if (!existing || existing.id !== modRoleId) {
+                const newRoles = [
+                    ...oldConfig.roles.filter(r => r.name !== RanksType.mod),
+                    { name: RanksType.mod, id: modRoleId },
+                ];
+                await updateConfig({ id: oldConfig._id, body: { roles: newRoles } });
+            }
+            resolve(true);
+            return;
+        }
+
         const role = config.roles.find(r => r.name === key);
 
         if (!role) {
