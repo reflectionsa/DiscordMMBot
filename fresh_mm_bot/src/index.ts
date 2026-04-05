@@ -39,14 +39,14 @@ initPostAimHeroCron(client);
 initCodeReminderCron(client);
 // runTests();
 
-const STATUS_CHANNEL_ID = '1490120560145858791';
+const STATUS_CHANNEL_ID = '1490124502120661122';
 
 const sendShutdownMessage = async (): Promise<void> => {
     try {
         const channel = await client.channels.fetch(STATUS_CHANNEL_ID).catch(() => null);
         if (channel && 'send' in channel) {
             const offlineEmbed = new EmbedBuilder()
-                .setTitle('🔴 System Offline')
+                .setTitle('System Offline')
                 .setColor('#CC0000')
                 .setDescription(
                     'The bot is going down for maintenance. Active matches will be preserved, but queues are closed.'

@@ -9,7 +9,7 @@ import {
 } from 'discord.js';
 import { safelyReplyToInteraction } from '../../helpers/interactions';
 import { handleReady } from '../../commands/Ready';
-import { GameType, RegionsType } from '../../types/queue';
+import { GameType, RegionsType, gameTypeQueueChannels } from '../../types/queue';
 import * as partyService from '../../services/party.service';
 import * as playerService from '../../services/player.service';
 import Match from '../../models/match.schema';
@@ -18,6 +18,7 @@ import { ready } from '../../services/queue.service';
 import { getConfig } from '../../services/system.service';
 import { ChannelsType, RanksType } from '../../types/channel';
 import { ceil } from 'lodash';
+import { sendMessageInChannel } from '../../helpers/messages';
 
 /**
  * Called when a player clicks 60m or 30m ready-up button and is in a party.
@@ -187,10 +188,26 @@ export const handlePartyReadyInteraction = async (
 
         updateStatus(client);
 
-        const lines = [`✅ **Queued (${queued.length}):** ${queued.join(', ') || 'none'}`];
-        if (failed.length)
-            lines.push(`❌ **Could not queue (${failed.length}):** ${failed.join(', ')}`);
-        lines.push(`Queue time: **${time} minutes**`);
+        // Post a minimal message in the queue channel: leader + member count
+        if (queued.length > 0) {
+            try {
+                const channelsType = gameTypeQueueChannels[gameType];
+                const queueChannelId = await getConfig().then(
+                    config => config.channels.find(c => c.name === channelsType)?.id
+                );
+                if (queueChannelId) {
+                    await sendMessageInChannel({
+                        channelId: queueChannelId,
+                        messageContent: `<@${party.leaderId}> queued with a party of ${queued.length}`,
+                        client,
+                    });
+                }
+            } catch {}
+        }
+
+        const lines = [`Queued (${queued.length}): ${queued.join(', ') || 'none'}`];
+        if (failed.length) lines.push(`Could not queue (${failed.length}): ${failed.join(', ')}`);
+        lines.push(`Queue time: ${time} minutes`);
 
         return safelyReplyToInteraction({
             interaction,

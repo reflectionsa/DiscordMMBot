@@ -16,7 +16,7 @@ export const handleResetSeasonInteraction = async (
 
     if (subAction === 'cancel') {
         const cancelEmbed = new EmbedBuilder()
-            .setTitle('❌ Reset Cancelled')
+            .setTitle('Reset Cancelled')
             .setColor('#808080')
             .setDescription('Season reset was cancelled. No changes were made.')
             .setTimestamp();
@@ -29,9 +29,9 @@ export const handleResetSeasonInteraction = async (
         await interaction.update({
             embeds: [
                 new EmbedBuilder()
-                    .setTitle('⏳ Resetting Season...')
+                    .setTitle('Resetting Season...')
                     .setColor('#FF9900')
-                    .setDescription('Processing database reset and channel cleanup...')
+                    .setDescription('Processing database reset and channel cleanup.')
                     .setTimestamp(),
             ],
             components: [],
@@ -54,7 +54,7 @@ export const handleResetSeasonInteraction = async (
             );
 
             // Find matches-played channel by name in the guild
-            let channelStatus = '⚠️ matches-played channel not found';
+            let channelStatus = 'matches-played channel not found';
             const guild = interaction.guild;
             if (guild) {
                 const target = guild.channels.cache.find(
@@ -67,17 +67,17 @@ export const handleResetSeasonInteraction = async (
                     const cloned = await target.clone();
                     await (cloned as TextChannel | VoiceChannel).setPosition(target.rawPosition);
                     await target.delete('Season reset executed by admin');
-                    channelStatus = `✅ <#${cloned.id}> cleared and recreated`;
+                    channelStatus = `<#${cloned.id}> cleared and recreated`;
                 }
             }
 
             const successEmbed = new EmbedBuilder()
-                .setTitle('✅ Season Reset Complete')
+                .setTitle('Season Reset Complete')
                 .setColor('#00CC44')
                 .addFields(
                     {
                         name: 'Database',
-                        value: '✅ All player ratings reset to **1000** — history, wins, and losses cleared',
+                        value: 'All player ratings reset to **1000** — history, wins, and losses cleared',
                         inline: false,
                     },
                     {
@@ -92,7 +92,7 @@ export const handleResetSeasonInteraction = async (
             await interaction.editReply({ embeds: [successEmbed], components: [] });
         } catch (err) {
             const errorEmbed = new EmbedBuilder()
-                .setTitle('❌ Reset Failed')
+                .setTitle('Reset Failed')
                 .setColor('#FF0000')
                 .setDescription(`An error occurred during the reset:\n\`\`\`${err}\`\`\``)
                 .setTimestamp();

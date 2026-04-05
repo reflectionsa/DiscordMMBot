@@ -4,7 +4,7 @@ import scaffold from '../helpers/scaffold';
 import { updateLeaderboard } from '../helpers/leaderboard';
 import { GameType } from '../types/queue';
 
-const STATUS_CHANNEL_ID = '1490120560145858791';
+const STATUS_CHANNEL_ID = '1490124502120661122';
 
 export default (client: Client): void => {
     client.on('ready', async () => {
@@ -24,7 +24,7 @@ export default (client: Client): void => {
         const statusChannel = await client.channels.fetch(STATUS_CHANNEL_ID).catch(() => null);
         if (statusChannel && 'send' in statusChannel) {
             const onlineEmbed = new EmbedBuilder()
-                .setTitle('🟢 System Online')
+                .setTitle('System Online')
                 .setColor('#00CC44')
                 .setDescription('The bot has successfully restarted. All queues are now open.')
                 .setTimestamp();

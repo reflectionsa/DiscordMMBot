@@ -18,7 +18,7 @@ export const ResetSeason: Command = {
     defaultMemberPermissions: [PermissionFlagsBits.Administrator],
     run: async (_client: Client, interaction: CommandInteraction) => {
         const confirmEmbed = new EmbedBuilder()
-            .setTitle('⚠️ Season Reset Confirmation')
+            .setTitle('Season Reset Confirmation')
             .setColor('#FF9900')
             .setDescription(
                 '**This action cannot be undone.**\n\n' +

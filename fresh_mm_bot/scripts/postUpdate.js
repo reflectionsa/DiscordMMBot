@@ -24,20 +24,18 @@ if (!TOKEN) {
 const body = JSON.stringify({
     embeds: [
         {
-            title: '📋 Bot Updates — April 3',
+            title: 'Bot Updates — April 4',
             description: [
-                'A lot went in today, here\'s the rundown:\n',
-                '• **Party System** — Full party management added. Players can create parties, invite others, and queue together.',
-                '• **Duel Queue** — New duel queue feature with its own queue selection flow and ready-up interaction.',
-                '• **/end_match** — Mods can now nullify a match and automatically reverse all rating changes for players involved.',
-                '• **Lookup & Party embeds** — Both commands got polished embed responses with improved user-facing info.',
-                '• **Redis Caching** — Player and queue services now use Redis for faster lookups.',
-                '• **Mod role fix** — Mod role validation now falls back to a hardcoded env var if the role isn\'t found in config.',
-                '• **/reset_season** — Hard resets all player elos to 1000 and clears match history. Confirmation button required before it runs.',
-                '• **Bot status messages** — Bot now announces when it comes online 🟢 and goes offline 🔴 in this channel.',
+                'Changes pushed today:\n',
+                '• **Unqueue solo/party** — /unready now shows two options if you are in a party: leave queue solo or remove the entire party from queue. Only the party leader can unqueue the party.',
+                '• **Party queue message** — When a party queues together, the queue channel now shows a single clean message listing the leader and party size.',
+                '• **/reset_season** — Emojis removed, output cleaned up.',
+                '• **Edit button duration** — The Edit button on timeout logs now shows the ban duration in the label.',
+                '• **Restart fix** — /restart_bot now uses process.exit(0) instead of throwing an error, so nodemon reliably brings the bot back up.',
+                '• **Status messages** — Online and offline embeds now post to the correct channel every time the bot starts or shuts down.',
             ].join('\n'),
             color: 0xffb3c6,
-            footer: { text: 'April 3–4, 2026' },
+            footer: { text: 'April 4, 2026' },
         },
     ],
 });
